@@ -1,0 +1,8 @@
+us:
+  id: 1
+  name: United States
+  code: US
+
+canada:
+  name: Canada
+  code: CA

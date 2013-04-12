@@ -1,0 +1,9 @@
+baltimore:
+  name: <%=_ :baltimore %>
+  country: us
+  created_at: <%= Time.now %>
+
+montreal:
+  name: Montreal
+  country: canada
+  created_at: <%= Time.now %>

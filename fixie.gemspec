@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |gem|
   gem.name          = "fixie"
-  gem.version       = "0.0.1"
+  gem.version       = "0.1.0"
   gem.authors       = ["Paul Barry"]
   gem.email         = ["mail@paulbarry.com"]
   gem.description   = %q{A standalone library for managing test fixture data}
@@ -13,4 +13,8 @@ Gem::Specification.new do |gem|
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.require_paths = ["lib"]
+
+  gem.add_runtime_dependency "activesupport"
+  gem.add_runtime_dependency "sequel"
+  gem.add_development_dependency "sqlite3"
 end
