@@ -165,7 +165,11 @@ module Fixie
     #
     # @return [Symbol] The table name for this class
     def fixture_table_name
-      @fixture_table_name ||= name.demodulize.tableize.to_sym
+      @fixture_table_name ||= if respond_to?(:table_name)
+        table_name.to_sym
+      else
+        name.demodulize.tableize.to_sym
+      end
     end
   end
 
