@@ -1,6 +1,7 @@
 require 'fixie/version'
 require 'active_support/core_ext'
 require 'erb'
+require 'sequel'
 require 'yaml'
 require 'zlib'
 
@@ -40,6 +41,8 @@ module Fixie
 
       all_fixtures = {}
 
+      now = Time.now.utc
+
       dbs.each do |db_name, db|
         all_fixtures[db_name] = {}
 
@@ -59,6 +62,8 @@ module Fixie
         # Do a second pass to resolve associations and load data in DB
         all_fixtures[db_name].each do |table_name, fixtures|
           table = db[table_name]
+          table_has_created_at = table.columns.include?(:created_at)
+          table_has_updated_at = table.columns.include?(:updated_at)
 
           fixtures.each do |name, data|
 
@@ -72,7 +77,12 @@ module Fixie
                   data.delete(attr)
                 end
               end
+
+              data["created_at"] = now if table_has_created_at && !data.key?("created_at")
+              data["updated_at"] = now if table_has_updated_at && !data.key?("updated_at")
             end
+
+            # Set created_at/updated_at if they exist
 
             # Finally, put the data in the DB
             table.insert(data)

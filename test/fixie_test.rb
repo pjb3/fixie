@@ -87,4 +87,8 @@ class FixieTest < MiniTest::Unit::TestCase
   def test_erb_is_evaled_in_context_of_fixie
     assert_equal "Baltimore", City.fixture(:baltimore).name
   end
+
+  def test_timestamps
+    assert City.fixture(:baltimore).created_at.present?
+  end
 end
