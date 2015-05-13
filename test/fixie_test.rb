@@ -1,7 +1,8 @@
-require 'test/unit'
+require 'minitest/autorun'
 require 'logger'
 require 'sequel'
 require 'sqlite3'
+require 'fileutils'
 
 $LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__)))
 $LOAD_PATH.unshift(File.expand_path('../lib', File.dirname(__FILE__)))
@@ -26,6 +27,7 @@ class City < Model
   attr_accessor :name, :country, :country_id, :created_at
 end
 
+FileUtils.mkdir_p 'log'
 db = Sequel.sqlite(logger: Logger.new("log/test.log"))
 
 db.create_table :countries do
@@ -54,7 +56,7 @@ Fixie.extend FakeGetText
 Fixie.load_fixtures
 Model.extend Fixie::Model
 
-class FixieTest < MiniTest::Unit::TestCase
+class FixieTest < Minitest::Test
 
   def test_explicit_id
     assert_equal "United States", Country.fixture(:us).name
@@ -73,7 +75,7 @@ class FixieTest < MiniTest::Unit::TestCase
   end
 
   def test_get
-    assert_equal "US", Fixie.fixture(:default, :countries, :us)["code"]
+    assert_equal "US", Fixie.fixture(:default, :countries, :us)[:code]
   end
 
   def test_loaded_in_db

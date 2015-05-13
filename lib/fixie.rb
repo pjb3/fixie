@@ -1,4 +1,5 @@
 require 'fixie/version'
+require 'active_support'
 require 'active_support/core_ext'
 require 'erb'
 require 'sequel'
@@ -35,8 +36,8 @@ module Fixie
 
   def self.all_fixtures
     @all_fixtures ||= begin
-      unless Dir.exists?(Fixie.dir)
-        raise "There is no directory in the $LOAD_PATH with a 'fixtures' directory in it"
+      unless Fixie.dir.present? && Dir.exists?(Fixie.dir)
+        raise "There is no directory in the load path with a 'fixtures' directory in it"
       end
 
       all_fixtures = {}
@@ -53,8 +54,11 @@ module Fixie
           fixtures = YAML.load(ERB.new(IO.read(file)).result(binding)).symbolize_keys
 
           fixtures.each do |name, data|
-            data["id"] ||= identify(name)
+            data[:id] ||= identify(name)
+            data.symbolize_keys!
           end
+
+          Fixie::Fixtures.define_fixture_accessor(db_name, table_name.to_sym)
 
           all_fixtures[db_name][table_name.to_sym] = fixtures
         end
@@ -62,6 +66,7 @@ module Fixie
         # Do a second pass to resolve associations and load data in DB
         all_fixtures[db_name].each do |table_name, fixtures|
           table = db[table_name]
+          table.delete
           table_has_created_at = table.columns.include?(:created_at)
           table_has_updated_at = table.columns.include?(:updated_at)
 
@@ -73,18 +78,18 @@ module Fixie
               if associated_fixtures && table.columns.include?("#{attr}_id".to_sym)
                 associated_fixture = associated_fixtures[data[attr].to_sym]
                 if associated_fixture
-                  data["#{attr}_id"] = associated_fixture['id']
+                  data["#{attr}_id".to_sym] = associated_fixture[:id]
                   data.delete(attr)
                 end
               end
 
-              data["created_at"] = now if table_has_created_at && !data.key?("created_at")
-              data["updated_at"] = now if table_has_updated_at && !data.key?("updated_at")
+              data[:created_at] = now if table_has_created_at && !data.key?(:created_at)
+              data[:updated_at] = now if table_has_updated_at && !data.key?(:updated_at)
             end
 
             # Set created_at/updated_at if they exist
 
-            # Finally, put the data in the DB
+            # Finally, replace the data in the DB
             table.insert(data)
           end
         end
@@ -117,6 +122,16 @@ module Fixie
     Fixie.all_fixtures
   end
 
+  module Fixtures
+    extend self
+
+    def define_fixture_accessor(db_name, table_name)
+      define_method(table_name) do |fixture_name|
+        Fixie.fixture(db_name, table_name, fixture_name)
+      end
+    end
+  end
+
   module Model
     # This will return an instance of this class loaded from
     # the fixtures matching the name
@@ -142,7 +157,7 @@ module Fixie
       new(fixture)
     end
 
-    # This method determine which database is used to load the fixture.
+    # This method determines which database is used to load the fixture.
     # The default implementation is to check the class to see if it has a
     # namespace, like 'Foo::Bar', and if it does, return :foo.
     # If it does not have a namespace, it will return :default.

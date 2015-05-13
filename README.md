@@ -26,7 +26,7 @@ To use Fixie, you first create some fixture files in a directory called `fixture
             ├── cities.yml
             └── countries.yml
 
-You must put all your fixtures into a subdirectory of the `fixtures` directory.  The name of the directory should be a good logical name for the database that the fixtures.  If you have only one database, `default` is a reasonable name, but if you have an app with customers in one database and orders in another, you would name them `customers` and `orders`.
+You must put all your fixtures into a subdirectory of the `fixtures` directory.  The name of the directory should be a good logical name for the database that the fixtures.  If you have only one database, you should use `default` as the name, but if you have an app with customers in one database and orders in another, you would name them `customers` and `orders`.
 
 Fixie uses Sequel to load the data into the database.  Fixie will work even if you aren't using Sequel in your application.  You must configure the Fixie databases and then call `load_fixtures` to get the fixtures to actually be loaded.  Your test helper might look like this:
 
@@ -36,7 +36,23 @@ Fixie.dbs[:default] = Sequel.sqlite
 Fixie.load_fixtures
 ```
 
-Now all the fixtures will be loaded into the test database.  In order to access them from a test, you need to mix the `Fixie::Model` module into the base class of your models.  For example, say you have models defined like this:
+Now all the fixtures will be loaded into the default database.  In order to access them from a test, you can the fixture as a Hash like this:
+
+``` ruby
+Fixie::Fixtures.countries(:us)
+```
+
+You can also include the `Fixie::Fixtures` model in your tests and then just call the method directly:
+
+``` ruby
+include Fixie::Fixtures
+
+def test_something
+  assert_equal "US", countries(:us)
+end
+```
+
+If you have models in your application and you want to get instances of the model back instead of Hashes, you need to mix the `Fixie::Model` module into the base class of your models.  For example, say you have models defined like this:
 
 ``` ruby
 class Model
@@ -61,12 +77,6 @@ Now in your tests, you can refer to fixtures like this:
 def test_something
   assert_equal "US", Country.fixture(:us)
 end
-```
-
-You can also access the fixtures in any context once they have been loaded like this:
-
-``` ruby
-Fixie.fixture(:default, :countries, :us)
 ```
 
 Fixtures are defined in YAML files like this:
