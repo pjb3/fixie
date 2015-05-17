@@ -66,7 +66,7 @@ module Fixie
         # Do a second pass to resolve associations and load data in DB
         all_fixtures[db_name].each do |table_name, fixtures|
           table = db[table_name]
-          table.delete
+          table.truncate(cascade: true, restart: true)
           table_has_created_at = table.columns.include?(:created_at)
           table_has_updated_at = table.columns.include?(:updated_at)
 
