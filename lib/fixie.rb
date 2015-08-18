@@ -3,6 +3,7 @@ require 'active_support'
 require 'active_support/core_ext'
 require 'erb'
 require 'sequel'
+require 'set'
 require 'yaml'
 require 'zlib'
 
@@ -64,33 +65,43 @@ module Fixie
         end
 
         # Do a second pass to resolve associations and load data in DB
-        all_fixtures[db_name].each do |table_name, fixtures|
-          table = db[table_name]
-          table.truncate(cascade: true, restart: true)
-          table_has_created_at = table.columns.include?(:created_at)
-          table_has_updated_at = table.columns.include?(:updated_at)
+        db.transaction(deferrable: true) do
+          all_fixtures[db_name].each do |table_name, fixtures|
+            table = db[table_name]
+            table.truncate(cascade: true, restart: true)
+            table_has_created_at = table.columns.include?(:created_at)
+            table_has_updated_at = table.columns.include?(:updated_at)
 
-          fixtures.each do |name, data|
+            json_columns = Set.new
+            db.schema(table_name).each do |column,metadata|
+              json_columns << column if metadata[:db_type] == 'json'
+            end
 
-            # Change attributes like city: baltimore to city_id: baltimore.id
-            data.keys.each do |attr|
-              associated_fixtures = all_fixtures[db_name][attr.to_s.pluralize.to_sym]
-              if associated_fixtures && table.columns.include?("#{attr}_id".to_sym)
-                associated_fixture = associated_fixtures[data[attr].to_sym]
-                if associated_fixture
-                  data["#{attr}_id".to_sym] = associated_fixture[:id]
-                  data.delete(attr)
+            fixtures.each do |name, data|
+
+              # Change attributes like city: baltimore to city_id: baltimore.id
+              data.keys.each do |attr|
+                associated_fixtures = all_fixtures[db_name][attr.to_s.pluralize.to_sym]
+                if associated_fixtures && table.columns.include?("#{attr}_id".to_sym)
+                  associated_fixture = associated_fixtures[data[attr].to_sym]
+                  if associated_fixture
+                    data["#{attr}_id".to_sym] = associated_fixture[:id]
+                    data.delete(attr)
+                  end
+                end
+
+                if db.database_type == :postgres && json_columns.include?(attr)
+                  data[attr] = Sequel.pg_json(data[attr])
                 end
               end
 
+              # Set created_at/updated_at if they exist
               data[:created_at] = now if table_has_created_at && !data.key?(:created_at)
               data[:updated_at] = now if table_has_updated_at && !data.key?(:updated_at)
+
+              # Finally, replace the data in the DB
+              table.insert(data)
             end
-
-            # Set created_at/updated_at if they exist
-
-            # Finally, replace the data in the DB
-            table.insert(data)
           end
         end
       end

@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |gem|
   gem.name          = "fixie"
-  gem.version       = "0.4.0"
+  gem.version       = "0.5.0"
   gem.authors       = ["Paul Barry"]
   gem.email         = ["mail@paulbarry.com"]
   gem.description   = %q{A standalone library for managing test fixture data}
